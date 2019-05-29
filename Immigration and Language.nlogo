@@ -1,5 +1,7 @@
 ;; BREEDS
 breed [speakers speaker] ;; The people in our world are called "speakers"
+undirected-link-breed [matings mating] ;; Matings between two people will be represented by a link
+
 
 ;; PROPERTIES
 ;; Speaker agents have the property of language. There are three choices for possible languages:
@@ -9,11 +11,16 @@ breed [speakers speaker] ;; The people in our world are called "speakers"
 ;;
 ;; Speakers also have an age, which influences when they reproduce and die.
 ;;
-;; Finally, speakers have an "opposite-language-ability," which marks their ability to speak the
+;; In addition, speakers have an "opposite-language-ability," which marks their ability to speak the
 ;; opposite language. This ability starts at 0 for monolingual speakers, but can increase as
 ;; the speaker interacts more with people who speak the opposite language. Once this
 ;; ability crosses certain threshold, the speaker becomes bilingual.
-speakers-own [language-spoken age opposite-language-ability]
+;;
+;; Finally, "mated?" is a boolean that is true if the speaker is currently mated.
+speakers-own [language-spoken age opposite-language-ability mated?]
+
+;; Number-children represents the number of children that each mating between speakers has produced.
+matings-own [number-children]
 
 ;; SETUP AND GO
 to setup
@@ -35,6 +42,8 @@ to setup
   ask speakers [
     set age random 70 ;; All of the speakers in the world will have an age randomly from 0 to 70
     setxy random-xcor random-ycor ;; All of the speakers will be randomly distributed in the world
+    set mated? false ;; Speakers in the world will start off being unmated with other speakers - TODO, may want to change this as we add influx immigration
+    set opposite-language-ability 0
     set size 2
   ]
   reset-ticks
@@ -45,33 +54,55 @@ to go
   ask speakers [
     age-or-die
     move
+    mate
   ]
   ;; For speakers of the original language:
   ask speakers with [language-spoken = "original"] [
     learn-immigrant-language
     check-if-bilingual
   ]
-
   ;; For speakers of the immigrant language:
   ask speakers with [language-spoken = "immigrant"] [
     learn-original-language
     check-if-bilingual
+  ]
+  ;; For all matings (pairs of speakers):
+  ask matings [
+    produce-children
   ]
   tick
 end
 
 ;; PROCEDURES FOR ALL SPEAKERS
 to age-or-die ;; If a speakers is too old, it dies. Otherwise, its age increments by one.
-  ifelse age > 70
-    [ hatch 1 [ set age 0 ] ;; TODO: change this!
-      die ]
+  ifelse age > 75
+    [ die ]
   [set age age + 0.5] ;; Each tick represents half a year in the life of a speaker.
 end
 
-to move
+to move ;; Speakers wander around the country.
   right random 100
   left random 100
   forward 0.1
+end
+
+;; Mating involves creating a "mating" link between the two speaker agents.
+;; If the speaker is above certain age, and the closest speaker is also a certain age, they mate if they are both single,
+;; meaning if they do not already have a mating link with another speaker.
+to mate
+  if age >= 18 and (mated? = false) [ ;; If the speaker is above 18 and single, it will look for a mate
+    if any? other speakers [
+      let potential-mate min-one-of other speakers [distance myself] ;; It will consider the closest speaker as a mate
+      ask potential-mate
+      [ if age >= 18 and (mated? = false) ;; If the mate is above 18 and also single, they will create a mating
+        [
+          create-mating-with myself
+          set mated? true
+          ask myself [ set mated? true]
+        ]
+      ]
+    ]
+  ]
 end
 
 ;; PROCEDURES FOR MONOLINGUAL SPEAKERS
@@ -84,7 +115,7 @@ end
 ;; - albeit at a much slower pace than a younger turtle
 to learn-immigrant-language
   let language-of-closest-speaker "null"
-  if any? speakers [
+  if any? other speakers [
     ask min-one-of other speakers [distance myself]
     [ set language-of-closest-speaker language-spoken ]
   ]
@@ -103,7 +134,7 @@ end
 
 to learn-original-language
   let language-of-closest-speaker "null"
-  if any? speakers [
+  if any? other speakers [
     ask min-one-of other speakers [distance myself]
     [ set language-of-closest-speaker language-spoken ]
   ]
@@ -128,12 +159,94 @@ to check-if-bilingual
     set color 84
   ]
 end
+
+
+;; PROCEDURES FOR MATINGS
+to produce-children
+  if number-children < max-num-children ;; If the couple has not exceeded the maximum threshold of children they can birth, then proceed
+  [
+    let random-num-1 random 5 ;; There is a 20% chance that a child is born on this tick, representing that children are not all born at the same time
+    if random-num-1 = 0 [
+      let parents [who] of both-ends ;; Create a list containing the who numbers of both parents involved in the mating
+      let parent-A speaker item 0 parents ;; Use who number to identify one parent
+      let parent-B speaker item 1 parents ;; Use who number to identify other parent
+      ask parent-A [ hatch-speakers 1
+        [ ;; Create a child
+          set mated? false
+          set size 2
+          set age 0
+          setxy ([xcor] of parent-A + [xcor] of parent-B) / 2
+          ([ycor] of parent-A + [ycor] of parent-B) / 2 ;; Set location of child to halfway between the two parents
+
+          ;; RULES FOR DETERMINING LANGUAGE OF CHILD:
+          ;; If both the parents speak the original language, then the child will also speak the original language
+          ;; since it is the only language that the parents know and can pass down to their child.
+          if [language-spoken] of parent-A = "original" and [language-spoken] of parent-B = "original" [
+            set color magenta ;; They will have a single magenta speech bubble, indicating they speak the original language
+            set language-spoken "original"
+            set shape "speaker"
+          ]
+          ;; Likewise, if both the parents speak the immigrant language, then the child will also speak the immigrant language.
+          if [language-spoken] of parent-A = "immigrant" and [language-spoken] of parent-B = "immigrant" [
+            set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
+            set language-spoken "immigrant"
+            set shape "speaker"
+          ]
+
+          ;; If one of the parents is bilingual, and the other speaks the original language, the child will speak the
+          ;; original language, because the parents must use the original language to communicate and thus the child
+          ;; is most likely to acquire the language they are exposed to during early language development.
+          if ([language-spoken] of parent-A = "original" and [language-spoken] of parent-B = "bilingual") or
+          ([language-spoken] of parent-A = "bilingual" and [language-spoken] of parent-B = "original") [
+            set color magenta ;; They will have a single magenta speech bubble, indicating they speak the original language
+            set language-spoken "original"
+            set shape "speaker"
+          ]
+
+          ;; Likewise, if one of the parents is bilingual, and the other speaks the immigrant language, the child
+          ;; will speak the immigrant language.
+          if ([language-spoken] of parent-A = "immigrant" and [language-spoken] of parent-B = "bilingual") or
+          ([language-spoken] of parent-A = "bilingual" and [language-spoken] of parent-B = "immigrant") [
+            set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
+            set language-spoken "immigrant"
+            set shape "speaker"
+          ]
+
+          ;; If both of the parents are bilingual or if the parents speak different languages, the child
+          ;; has a percent chance of being bilingual based on the "bilingual-inheritability" parameter.
+          ;; Otherwise, the child will have a 50% chance of speaking either language.
+          if [language-spoken] of parent-A = "immigrant" and [language-spoken] of parent-B = "immigrant" [
+            let random-num-2 random 100
+            if random-num-2 < bilingual-inheritability [ ;; Child becomes bilingual
+              set shape "bilingual" ;; They have both magenta and teal bubbles, indicating that they speak both languages
+              set language-spoken "bilingual"
+              set color 84
+            ]
+            if random-num-2 >= bilingual-inheritability [ ;; Child learns one of the two languages
+              ifelse random 1 = 0 [
+                set color magenta ;; They will have a single magenta speech bubble, indicating they speak the original language
+                set language-spoken "original"
+                set shape "speaker"
+              ]
+              [
+                set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
+                set language-spoken "immigrant"
+                set shape "speaker"
+              ]
+            ]
+          ]
+        ]
+      ]
+     set number-children number-children + 1 ;; After the child is born, increase the number of children that the mating now has
+    ]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-296
-55
-733
-493
+293
+53
+730
+491
 -1
 -1
 13.0
@@ -157,10 +270,10 @@ ticks
 30.0
 
 BUTTON
-98
-59
-164
-92
+30
+35
+96
+68
 NIL
 setup
 NIL
@@ -174,10 +287,10 @@ NIL
 1
 
 BUTTON
-190
-58
-253
-91
+122
+34
+185
+67
 NIL
 go
 T
@@ -191,40 +304,40 @@ NIL
 1
 
 SLIDER
-97
-187
-253
-220
+29
+157
+185
+190
 number-immigrants
 number-immigrants
 0
 25
-16.0
+10.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-98
-147
-252
-180
+30
+117
+184
+150
 number-citizens
 number-citizens
 0
 100
-63.0
+30.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-97
-227
-253
-260
+29
+197
+185
+230
 number-bilinguals
 number-bilinguals
 0
@@ -236,10 +349,10 @@ NIL
 HORIZONTAL
 
 PLOT
-768
-217
-1063
-352
+765
+215
+1060
+350
 Immigrant-Language Monolinguals
 NIL
 NIL
@@ -254,10 +367,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count speakers with [language-spoken = \"immigrant\"]"
 
 PLOT
-769
-56
-1060
-199
+766
+54
+1057
+197
 Original-Language Monolinguals
 NIL
 NIL
@@ -272,10 +385,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count speakers with [language-spoken = \"original\"]"
 
 PLOT
-768
-368
-1065
-510
+765
+366
+1062
+508
 Immigrant-and-Original Blinguals
 NIL
 NIL
@@ -290,9 +403,9 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count speakers with [language-spoken = \"bilingual\"]"
 
 MONITOR
-1005
+1002
 71
-1098
+1095
 116
 count
 count speakers with [language-spoken = \"original\"]
@@ -301,10 +414,10 @@ count speakers with [language-spoken = \"original\"]
 11
 
 MONITOR
-1008
-232
-1102
-277
+1005
+230
+1099
+275
 count
 count speakers with [language-spoken = \"immigrant\"]
 17
@@ -312,10 +425,10 @@ count speakers with [language-spoken = \"immigrant\"]
 11
 
 MONITOR
-1009
-385
-1101
-430
+1006
+383
+1098
+428
 count
 count speakers with [language-spoken = \"bilingual\"]
 17
@@ -323,10 +436,10 @@ count speakers with [language-spoken = \"bilingual\"]
 11
 
 MONITOR
-1005
-123
-1098
-168
+1002
+121
+1095
+166
 % of population
 (count speakers with [language-spoken = \"original\"] / count turtles) * 100
 2
@@ -334,10 +447,10 @@ MONITOR
 11
 
 MONITOR
-1009
-282
-1102
-327
+1006
+280
+1099
+325
 % of population
 (count speakers with [language-spoken = \"immigrant\"] / count turtles) * 100
 2
@@ -345,10 +458,10 @@ MONITOR
 11
 
 MONITOR
-1010
-435
-1104
-480
+1007
+433
+1101
+478
 % of population
 (count speakers with [language-spoken = \"bilingual\"] / count turtles) * 100
 2
@@ -356,61 +469,86 @@ MONITOR
 11
 
 SLIDER
-96
-317
-253
-350
+29
+286
+186
+319
 bilingual-threshold
 bilingual-threshold
 50
 100
-77.0
+55.0
 1
 1
 NIL
 HORIZONTAL
 
 TEXTBOX
-98
-287
-285
-329
+31
+256
+218
+298
 Difficult level for monolingual speaker to become bilingual
 11
 0.0
 1
 
 TEXTBOX
+30
 98
-128
-248
-146
+180
+116
 Setup for Initial Population\n
 11
 0.0
 1
 
 SLIDER
-96
-416
-256
-449
-number-children
-number-children
+29
+385
+189
+418
+max-num-children
+max-num-children
 0
-10
-50.0
+5
+2.0
 1
 1
 NIL
 HORIZONTAL
 
 TEXTBOX
-98
-385
-248
-413
+31
+354
+181
+382
 Number of children each mating link can produce
+11
+0.0
+1
+
+SLIDER
+27
+476
+190
+509
+bilingual-inheritability
+bilingual-inheritability
+0
+100
+34.0
+1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+31
+445
+206
+487
+Likelihood that a child becomes bilingual if bilingualism possible
 11
 0.0
 1
