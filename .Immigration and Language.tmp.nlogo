@@ -245,7 +245,7 @@ end
 to immigration-flow
   let random-num 20
   if random-num < rate-of-immigration [
-    create-speakers 1 ;; Create an immigrant
+    create-speakers 1 ;; Create an immigrants
     [ set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
       set language-spoken "immigrant"
       set shape "speaker"
@@ -255,11 +255,14 @@ end
 
 ;; When the observer clicks the "immmigration wave" button, a number of immigrants will
 ;; be added to the country depending on the "immigration-wave-size" parameter
-to immigration-wave
-  create-speakers immigration-wave-size ;; Create X number of immigrations, with X = immigration-wave-size
-  [ set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
-    set language-spoken "immigrant"
-    set shape "speaker"
+to immigration-flow
+  let random-num 20
+  if random-num < rate-of-immigration [
+    create-speakers 1 ;; Create an immigrants
+    [ set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
+      set language-spoken "immigrant"
+      set shape "speaker"
+    ]
   ]
 end
 
