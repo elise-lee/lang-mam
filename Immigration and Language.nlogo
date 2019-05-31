@@ -22,6 +22,8 @@ speakers-own [language-spoken age opposite-language-ability mated?]
 ;; Number-children represents the number of children that each mating between speakers has produced.
 matings-own [number-children]
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; SETUP AND GO
 to setup
   clear-all
@@ -40,7 +42,7 @@ to setup
     set color 84
   ]
   ask speakers [
-    set age random 70 ;; All of the speakers in the world will have an age randomly from 0 to 70
+    set age random 75 ;; All of the speakers in the world will have an age randomly from 0 to 75
     setxy random-xcor random-ycor ;; All of the speakers will be randomly distributed in the world
     set mated? false ;; Speakers in the world will start off being unmated with other speakers - TODO, may want to change this as we add influx immigration
     set opposite-language-ability 0
@@ -74,11 +76,13 @@ to go
   tick
 end
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; PROCEDURES FOR ALL SPEAKERS
-to age-or-die ;; If a speakers is too old, it dies. Otherwise, its age increments by one.
+to age-or-die ;; If a speakers is too old, it dies. Otherwise, its age increments.
   ifelse age > 75
     [ die ]
-  [set age age + 0.5] ;; Each tick represents half a year in the life of a speaker.
+  [set age age + 1]
 end
 
 to move ;; Speakers wander around the country.
@@ -105,6 +109,8 @@ to mate
     ]
   ]
 end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; PROCEDURES FOR MONOLINGUAL SPEAKERS
 ;; Speakers will "talk" to their nearest turtle and if the turtle speaks the opposite language, they
@@ -161,6 +167,7 @@ to check-if-bilingual
   ]
 end
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; PROCEDURES FOR MATINGS
 to produce-children
@@ -239,16 +246,25 @@ to produce-children
   ]
 end
 
-;; IMMIGRATION FLOW PROCEDURES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; IMMIGRATION FLOW AND IMMIGRATION RATE PROCEDURES
 ;; If the "allow-immigration-flow" switch is on, the immigrants will enter the county at the rate specified by the
 ;; "rate-of-immigration" parameter.
 to immigration-flow
-  let random-num 20
-  if random-num < rate-of-immigration [
-    create-speakers 1 ;; Create an immigrant
-    [ set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
-      set language-spoken "immigrant"
-      set shape "speaker"
+  if allow-immigration-flow? [
+    let random-num random 10
+    if random-num < rate-of-immigration [
+      create-speakers 1 ;; Create an immigrant
+      [ set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
+        set language-spoken "immigrant"
+        set shape "speaker"
+        set age random 70 ;; All of the speakers in the world will have an age randomly from 0 to 70
+        setxy random-xcor random-ycor ;; All of the speakers will be randomly distributed in the world
+        set mated? false ;; Speakers in the world will start off being unmated with other speakers - TODO, may want to change this as we add influx immigration
+        set opposite-language-ability 0
+        set size 2
+      ]
     ]
   ]
 end
@@ -260,8 +276,15 @@ to immigration-wave
   [ set color 84 ;; They will have a single teal bubble, indicating they speak the immigrant language
     set language-spoken "immigrant"
     set shape "speaker"
+    set age random 70 ;; All of the speakers in the world will have an age randomly from 0 to 70
+    setxy random-xcor random-ycor ;; All of the speakers will be randomly distributed in the world
+    set mated? false ;; Speakers in the world will start off being unmated with other speakers - TODO, may want to change this as we add influx immigration
+    set opposite-language-ability 0
+    set size 2
   ]
 end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; PROCEDURES FOR OBSERVING AS THE MODEL RUNS
 ;; To watch any one of the original-language speakers in the model, if there are any original-language speakers
@@ -286,13 +309,13 @@ to watch-bilingual
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-528
-71
-965
-509
+431
+57
+1011
+638
 -1
 -1
-13.0
+17.333333333333332
 1
 10
 1
@@ -313,10 +336,10 @@ ticks
 30.0
 
 BUTTON
-138
-37
-204
-75
+129
+59
+195
+97
 NIL
 setup
 NIL
@@ -330,10 +353,10 @@ NIL
 1
 
 BUTTON
-230
-37
-296
-75
+221
+59
+287
+97
 NIL
 go
 T
@@ -348,9 +371,9 @@ NIL
 
 SLIDER
 28
-154
+204
 184
-187
+237
 number-immigrants
 number-immigrants
 0
@@ -363,9 +386,9 @@ HORIZONTAL
 
 SLIDER
 29
-114
+164
 183
-147
+197
 number-citizens
 number-citizens
 0
@@ -378,9 +401,9 @@ HORIZONTAL
 
 SLIDER
 28
-194
+244
 184
-227
+277
 number-bilinguals
 number-bilinguals
 0
@@ -392,13 +415,13 @@ NIL
 HORIZONTAL
 
 PLOT
-1033
-229
-1343
-364
+1041
+203
+1351
+338
 % Immigrant-Language Monolinguals
-NIL
-NIL
+ticks
+% of speakers
 0.0
 10.0
 0.0
@@ -407,16 +430,16 @@ true
 true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot (count speakers with [language-spoken = \"immigrant\"] / count turtles) * 100"
+"default" 1.0 0 -12345184 true "" "plot (count speakers with [language-spoken = \"immigrant\"] / count turtles) * 100"
 
 PLOT
-1034
-68
-1340
-211
+1042
+38
+1348
+185
 % Original-Language Monolinguals
-NIL
-NIL
+ticks
+% of speakers
 0.0
 10.0
 0.0
@@ -425,16 +448,16 @@ true
 true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot (count speakers with [language-spoken = \"original\"] / count turtles) * 100"
+"default" 1.0 0 -5825686 true "" "plot (count speakers with [language-spoken = \"original\"] / count turtles) * 100"
 
 PLOT
-1032
-380
-1345
-522
+1040
+354
+1353
+496
 % Immigrant-and-Original Blinguals
-NIL
-NIL
+ticks
+% of speakers
 0.0
 10.0
 0.0
@@ -446,10 +469,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot (count speakers with [language-spoken = \"bilingual\"] / count turtles) * 100"
 
 MONITOR
-1285
-85
-1378
-130
+1293
+50
+1386
+95
 count
 count speakers with [language-spoken = \"original\"]
 0
@@ -457,10 +480,10 @@ count speakers with [language-spoken = \"original\"]
 11
 
 MONITOR
-1288
-244
-1382
-289
+1296
+218
+1390
+263
 count
 count speakers with [language-spoken = \"immigrant\"]
 17
@@ -468,10 +491,10 @@ count speakers with [language-spoken = \"immigrant\"]
 11
 
 MONITOR
-1289
-397
-1381
-442
+1297
+371
+1389
+416
 count
 count speakers with [language-spoken = \"bilingual\"]
 17
@@ -479,10 +502,10 @@ count speakers with [language-spoken = \"bilingual\"]
 11
 
 MONITOR
-1285
-135
-1378
-180
+1293
+100
+1386
+145
 % of population
 (count speakers with [language-spoken = \"original\"] / count turtles) * 100
 2
@@ -490,10 +513,10 @@ MONITOR
 11
 
 MONITOR
-1289
-294
-1382
-339
+1297
+268
+1390
+313
 % of population
 (count speakers with [language-spoken = \"immigrant\"] / count turtles) * 100
 2
@@ -501,10 +524,10 @@ MONITOR
 11
 
 MONITOR
-1290
-447
-1384
-492
+1298
+421
+1392
+466
 % of population
 (count speakers with [language-spoken = \"bilingual\"] / count turtles) * 100
 2
@@ -513,14 +536,14 @@ MONITOR
 
 SLIDER
 29
-294
+344
 186
-327
+377
 bilingual-threshold
 bilingual-threshold
 50
 100
-54.0
+60.0
 1
 1
 NIL
@@ -528,9 +551,9 @@ HORIZONTAL
 
 TEXTBOX
 31
-264
+314
 218
-306
+339
 Difficult level for monolingual speaker to become bilingual
 11
 0.0
@@ -538,9 +561,9 @@ Difficult level for monolingual speaker to become bilingual
 
 TEXTBOX
 32
-93
+143
 222
-133
+161
 Setup for Initial Population\n
 11
 0.0
@@ -548,9 +571,9 @@ Setup for Initial Population\n
 
 SLIDER
 31
-507
+557
 191
-540
+590
 max-num-children
 max-num-children
 0
@@ -563,9 +586,9 @@ HORIZONTAL
 
 TEXTBOX
 33
-476
+526
 183
-504
+554
 Number of children each mating link can produce
 11
 0.0
@@ -573,14 +596,14 @@ Number of children each mating link can produce
 
 SLIDER
 29
-409
+459
 192
-442
+492
 bilingual-inheritability
 bilingual-inheritability
 0
 100
-20.0
+50.0
 1
 1
 NIL
@@ -588,19 +611,19 @@ HORIZONTAL
 
 TEXTBOX
 30
-374
+424
 205
-416
+466
 Likelihood that a child becomes bilingual if bilingualism possible
 11
 0.0
 1
 
 SWITCH
-246
-123
-442
-156
+211
+175
+407
+208
 allow-immigration-flow?
 allow-immigration-flow?
 1
@@ -608,25 +631,25 @@ allow-immigration-flow?
 -1000
 
 SLIDER
-246
-165
-420
-198
+211
+217
+385
+250
 rate-of-immigration
 rate-of-immigration
 1
 10
-5.0
+10.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-247
-279
-394
-312
+212
+331
+359
+364
 NIL
 immigration-wave
 NIL
@@ -640,25 +663,25 @@ NIL
 1
 
 SLIDER
-247
-321
-420
-354
+212
+373
+385
+406
 immigration-wave-size
 immigration-wave-size
 0
 10
-5.0
+3.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-250
-440
-389
-473
+215
+492
+354
+525
 NIL
 watch-immigrant\n
 NIL
@@ -672,10 +695,10 @@ NIL
 1
 
 BUTTON
-251
-483
-390
-516
+216
+535
+355
+568
 NIL
 watch-original\n
 NIL
@@ -689,30 +712,30 @@ NIL
 1
 
 TEXTBOX
-250
-92
-468
-134
+215
+144
+433
+186
 Introducting immigrants that steadily enter country at the chosen rate
 11
 0.0
 1
 
 TEXTBOX
-249
-233
-452
-303
+214
+285
+417
+327
 For use as the model is running, will introduce a one-time wave of immigration of the specified size
 11
 0.0
 1
 
 BUTTON
-251
-525
-390
-558
+216
+577
+355
+610
 NIL
 watch-bilingual
 NIL
@@ -726,14 +749,34 @@ NIL
 1
 
 TEXTBOX
-250
-389
-439
-445
+215
+441
+404
+497
 Observe a immigrant-language, original-language, or bilingual speaker as the model runs
 11
 0.0
 1
+
+PLOT
+1041
+509
+1355
+702
+Histogram of Languages Spoken
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"set-plot-x-range 0 4" "plot-pen-reset\n\n;; Plotting count of original-language monolinguals\nif (any? turtles with [language-spoken = \"original\"])\n[ set-plot-pen-color magenta\n  ask patch 0 0\n  [ plot count turtles with [language-spoken = \"original\"] ] ]\n\n;; Plotting count of immigrant-language monolinguals\nif (any? turtles with [language-spoken = \"immigrant\"])\n[ set-plot-pen-color cyan\n  ask patch 0 0\n  [ plot count turtles with [language-spoken = \"immigrant\"] ] ]\n  \n;; Plotting count of bilinguals\nif (any? turtles with [language-spoken = \"bilingual\"])\n[ set-plot-pen-color black\n  ask patch 0 0\n  [ plot count turtles with [language-spoken = \"bilingual\"] ] ]\n  \n  set-plot-pen-color cyan"
+PENS
+"immigrant" 1.0 1 -11221820 true "" ""
+"bilingual" 1.0 1 -16777216 true "" ""
+"original" 1.0 0 -5825686 true "" ""
 
 @#$#@#$#@
 ## WHAT IS IT?
